@@ -1,3 +1,4 @@
+. venv/bin/activate
 . /opt/ros/jazzy/setup.sh
 . ./install/setup.sh
 # Ensure access to the virtual environment packages
