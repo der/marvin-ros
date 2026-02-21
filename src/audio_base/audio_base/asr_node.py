@@ -30,7 +30,8 @@ class ASRNode(Node):
         # Declare parameters
         self.declare_parameter('device_index', -1)  # -1 for default device
         self.declare_parameter('topic', 'audio_stream')
-        self.declare_parameter('model_name', 'small.en')
+        self.declare_parameter('model_name', 'large-v3-turbo-q5_0')
+#        self.declare_parameter('model_name', 'small.en')
         
         # Get parameters
         self.device_index = self.get_parameter('device_index').value
