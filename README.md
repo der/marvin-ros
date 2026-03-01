@@ -4,13 +4,15 @@ ROS2 nodes to run a base station machine to provide control and "intelligence" f
 
 Use via rosbridge so Marvin doesn't need to run ROS2 itself.
 
-## Set up
+## Set up - main box
 
 ```
 . /opt/ros/jazzy/setup.bash
-python -m venv ./venv  --system-site-packages
+python3 -m venv ./venv
 . ./venv/bin/activate
 touch ./venv/COLCON_IGNORE
+# pywhipercpp see below
+pip install -r requirements.txt
 rosdep install -i --from-path src --rosdistro jazzy -y
 colcon build --symlink-install
 . install/local_setup.bash
@@ -24,6 +26,23 @@ GGML_CUDA=1 pip install git+https://github.com/absadiki/pywhispercpp
 ```
 
 But for some reason this isn't actually about to use CUDA.
+
+## Set up Strix Halo
+
+In ubuntu toolbox:
+
+```
+. /opt/ros/jazzy/setup.bash
+python3 -m venv ./venv
+. ./venv/bin/activate
+touch ./venv/COLCON_IGNORE
+GGML_VULKAN=1 pip install git+https://github.com/absadiki/pywhispercpp
+pip install -r requirements.txt
+rosdep install -i --from-path src --rosdistro jazzy -y
+colcon build --symlink-install
+. install/local_setup.bash
+sudo apt install ros-jazzy-rosbridge-server
+```
 
 ## Running
 

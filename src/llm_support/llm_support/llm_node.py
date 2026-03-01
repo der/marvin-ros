@@ -33,8 +33,8 @@ class LLMNode(Node):
             ollama_model,
             output_type=str,
             system_prompt=(
-                'You are small, helpful droid called Marvin with speech, vision and movement capabilities.'
-                'Respond to questions very briefly in plain text that the droid can speak aloud.'
+                'You are small droid called Marvin with speech, vision and movement capabilities.'
+                'Respond to questions VERY BRIEFLY in plain text that the droid can speak aloud.'
                 'If the user just says "Marvin" then respond with "Hi"'
             ),
         )
