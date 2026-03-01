@@ -1,3 +1,4 @@
+import re
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -7,15 +8,20 @@ from pydantic_ai.providers.ollama import OllamaProvider
 import asyncio
 import threading
 
+# Matches the position just after sentence-ending punctuation followed by whitespace
+_SENTENCE_SPLIT_RE = re.compile(r'(?<=[.!?])\s+')
+
 
 class LLMNode(Node):
     def __init__(self):
         super().__init__('llm_node')
 
         self.declare_parameter('text_topic', 'text_stream')
+        self.declare_parameter('response_topic', 'llm_response')
         self.declare_parameter('model_name', 'granite4:tiny-h')
 
         self.topic_name = self.get_parameter('text_topic').value
+        self.response_topic = self.get_parameter('response_topic').value
         self.model_name = self.get_parameter('model_name').value
 
         ollama_model = OpenAIChatModel(
@@ -39,8 +45,10 @@ class LLMNode(Node):
             self.message_callback,
             10,
         )
+        self.publisher = self.create_publisher(String, self.response_topic, 10)
         self.get_logger().info(
-            f'LLM Node started, listening on topic: {self.topic_name}, using model: {self.model_name}'
+            f'LLM Node started, listening on topic: {self.topic_name}, '
+            f'publishing to: {self.response_topic}, using model: {self.model_name}'
         )
 
     def message_callback(self, message: String):
@@ -51,10 +59,27 @@ class LLMNode(Node):
     def _run_agent(self, text: str):
         asyncio.run(self._stream_agent(text))
 
+    def _publish(self, text: str):
+        text = text.strip()
+        if text:
+            self.get_logger().info(f'LLM response: {text}')
+            msg = String()
+            msg.data = text
+            self.publisher.publish(msg)
+
     async def _stream_agent(self, text: str):
+        buffer = ''
         async with self.agent.run_stream(text) as response:
-            async for chunk in response.stream_text():
-                self.get_logger().info(f'LLM stream: {chunk}')
+            async for chunk in response.stream_text(delta=True):
+                buffer += chunk
+                # Publish any complete sentences found in the buffer
+                parts = _SENTENCE_SPLIT_RE.split(buffer)
+                # The last element may be an incomplete sentence — keep it in the buffer
+                for sentence in parts[:-1]:
+                    self._publish(sentence)
+                buffer = parts[-1]
+        # Publish any remaining text after streaming completes
+        self._publish(buffer)
 
 
 def main(args=None):
