@@ -1,7 +1,3 @@
 int32 x 0
 bool awake true
 bool wide false
----
-string feedback
----
-bool acknowledged
