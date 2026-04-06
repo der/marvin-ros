@@ -15,3 +15,6 @@ pymongo
 pillow
 cbor2
 pocket-tts
+empy
+catkin_pkg
+lark

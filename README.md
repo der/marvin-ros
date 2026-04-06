@@ -1,4 +1,4 @@
-# Marvin ROS2
+# ROS2 Host for Marvin
 
 ROS2 nodes to run a base station machine to provide control and "intelligence" for Marvin the droid.
 
@@ -25,7 +25,7 @@ For asr_node also install `pywhispercpp` with appropriate GPU support. E.g.
 GGML_CUDA=1 pip install git+https://github.com/absadiki/pywhispercpp
 ```
 
-But for some reason this isn't actually about to use CUDA.
+But for some reason this fails to actually use CUDA.
 
 ## Set up Strix Halo
 
