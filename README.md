@@ -73,4 +73,4 @@ Provides the following nodes:
 
 ### llm_support
 
-`llm_node` subscribes to `text_stream` and @@
+`llm_node` subscribes to `text_stream` and responds on `llm_response` topic.
