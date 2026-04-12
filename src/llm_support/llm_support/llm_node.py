@@ -5,6 +5,8 @@ from std_msgs.msg import String
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
+from pydantic_ai.profiles import ModelProfile
+
 import asyncio
 import threading
 
@@ -27,6 +29,10 @@ class LLMNode(Node):
         ollama_model = OpenAIChatModel(
             model_name=self.model_name,
             provider=OllamaProvider(base_url='http://localhost:11434/v1'),
+            profile=ModelProfile(
+                supports_thinking=True,
+                thinking_tags=('<|channel>thought','<channel|>')
+            )
         )
 
         self.agent = Agent(
@@ -37,6 +43,7 @@ class LLMNode(Node):
                 'Respond to questions VERY BRIEFLY in plain text that the droid can speak aloud.'
                 'If the user just says "Marvin" then respond with "Hi"'
             ),
+            model_settings={'thinking': False}
         )
 
         self.is_running = False

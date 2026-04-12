@@ -18,3 +18,7 @@ pocket-tts
 empy
 catkin_pkg
 lark
+torch
+torchvision
+accellerate
+librosa
