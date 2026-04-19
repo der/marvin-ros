@@ -58,7 +58,7 @@ class LLMNode(Node):
 
         self.event_subscription = self.create_subscription(
             String,
-            'events',
+            '/events',
             self.event_callback,
             10,
         )
@@ -71,7 +71,7 @@ class LLMNode(Node):
         
         self.event_publisher = self.create_publisher(
             String,
-            'events',
+            '/events',
             10
         )
 

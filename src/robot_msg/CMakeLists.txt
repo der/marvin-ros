@@ -26,5 +26,6 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Eyes.msg"
+  "msg/Neck.msg"
 )
 ament_package()

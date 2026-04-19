@@ -66,7 +66,7 @@ class TTSNode(Node):
 
         self.event_subscription = self.create_subscription(
             String,
-            'events',
+            '/events',
             self.event_callback,
             10,
         )

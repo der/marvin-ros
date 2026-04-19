@@ -62,7 +62,7 @@ class ASRNode(Node):
 
         self.event_publisher = self.create_publisher(
             String,
-            'events',
+            '/events',
             10
         )
         
