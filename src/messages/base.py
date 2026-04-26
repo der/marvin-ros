@@ -60,13 +60,14 @@ class BaseNode:
             self._connected.clear()
 
         @self.sio.on("message")
-        async def on_message(data: dict):
+        async def on_message(data: dict, binary: Optional[bytes] = None):
             room = data.get("room", "unknown")
             message = data.get("message", {})
-            binary = data.get("binary")
+            has_binary = data.get("has_binary", False)
+            payload = binary if has_binary else None
             handler = self._handlers.get(room)
             if handler:
-                await handler(message, binary)
+                await handler(message, payload)
             else:
                 logger.debug(f"{self.node_name} received message on {room} (no handler)")
 
@@ -104,9 +105,10 @@ class BaseNode:
         """Connect to hub and wait until interrupted."""
         await self.sio.connect(self.hub_url)
         await self._connected.wait()
+        # Use a persistent event to keep the node alive
+        self._running = asyncio.Event()
         try:
-            while self.sio.connected:
-                await asyncio.sleep(1)
+            await self._running.wait()
         except asyncio.CancelledError:
             pass
         finally:

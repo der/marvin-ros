@@ -1,76 +1,101 @@
-# ROS2 Host for Marvin
+# Marvin Base Station
 
-ROS2 nodes to run a base station machine to provide control and "intelligence" for Marvin the droid.
+Socket.io-based base station nodes for Marvin the droid. All nodes communicate via a central hub process using python-socketio.
 
-Use via rosbridge so Marvin doesn't need to run ROS2 itself.
+## Architecture
 
-## Set up - main box
+- **Hub**: Standalone ASGI server (uvicorn + python-socketio) on port 5000
+- **Rooms**: Equivalent of ROS2 topics - join to subscribe, emit to publish
+- **Messages**: Pydantic models sent as dicts over socket.io, with binary attachments for audio data
+- **Nodes**: Separate asyncio processes connecting to the hub
 
-```
-. /opt/ros/jazzy/setup.bash
-python3 -m venv ./venv
+## Setup
+
+```bash
+python3 -m venv ./venv && touch ./venv/COLCON_IGNORE
 . ./venv/bin/activate
-touch ./venv/COLCON_IGNORE
-# pywhipercpp see below
 pip install -r requirements.txt
-rosdep install -i --from-path src --rosdistro jazzy -y
-colcon build --symlink-install
-. install/local_setup.bash
-sudo apt install ros-jazzy-rosbridge-server
+. ./setup.sh
 ```
 
-For asr_node also install `pywhispercpp` with appropriate GPU support. E.g. 
+For ASR node, install `pywhispercpp` with GPU support:
 
-```
-GGML_CUDA=1 pip install git+https://github.com/absadiki/pywhispercpp
-```
-
-But for some reason this fails to actually use CUDA.
-
-## Set up Strix Halo
-
-In ubuntu toolbox:
-
-```
-. /opt/ros/jazzy/setup.bash
-python3 -m venv ./venv
-. ./venv/bin/activate
-touch ./venv/COLCON_IGNORE
+```bash
+# Strix Halo (Vulkan)
 GGML_VULKAN=1 pip install git+https://github.com/absadiki/pywhispercpp
-pip install -r requirements.txt
-rosdep install -i --from-path src --rosdistro jazzy -y
-colcon build --symlink-install
-. install/local_setup.bash
-sudo apt install ros-jazzy-rosbridge-server
 ```
 
 ## Running
 
-- `start_bridge.sh`
-- `start_asr.sh`
-- `start_llm.sh`
+```bash
+# Start hub first
+./start_hub.sh
 
-## Packages
+# Then individual nodes
+./start_capture.sh     # Audio capture from mic
+./start_asr.sh         # ASR (whisper)
+./start_asr_gemma.sh   # ASR (gemma multimodal)
+./start_llm.sh         # LLM (gemma4:26b via ollama)
+./start_tts.sh         # TTS (pocket-tts)
+./start_player.sh      # Audio playback
+```
 
-### audio_msg
+## Rooms & Data Flow
 
-Audio message formats for sending from Marvin to base station. Similar to `audio_common` but had initial issues with that, and want to include an `event` field in messages to mark start/end of utterances.
+```
+audio_stream → ASR node → text_stream → LLM node → llm_response → TTS node → speech_stream → player
+```
 
-Default to use is `Audio` format which has:
-   - `info`  - `num_channels`, `sample_rate`, `chunk_size`
-   - `data` - `float32_data`, `int16_data`
-   - `event` - string for associated event, supports at least `start_utterance` and `end_utterance`
-  
-### audio_base
+| Room | Direction | Content |
+|------|-----------|---------|
+| `audio_stream` | capture → ASR | Audio chunks (AudioMessage) |
+| `text_stream` | ASR → LLM | Transcribed text |
+| `llm_response` | LLM → TTS | LLM response sentences |
+| `speech_stream` | TTS → player | Synthesized audio chunks |
+| `events` | any → any | Debug/stop/interrupt signals |
 
-Provides the following nodes:
+## Nodes
 
-`capture_node` - capture audio stream from default mic (default mono, 16Khz, 16bit int, 512 sample chunks) and publishes to topic `audio_stream`. All those can be set by parameters, especially `topic` to set the topic.
+### capture_node
+Captures audio from default mic (16kHz, mono, 16-bit, 512-sample chunks) and publishes to `audio_stream`. Utterance start/end events come from an external source.
 
-`player_node` - consumes messages from topic (default `audio_stream` as above) to play through default speaker, takes audio settings from info header in the stream messages
+### player_node
+Subscribes to an audio room and plays through default speaker using PyAudio. Handles dynamic format changes.
 
-`asr_node` - consumes messages from topic (default `audio_stream` as above) and at start of utterance event captures data to submit to ASR, at end of utterance event runs fasterwhisper ASR and sends the result to `text_stream`
+### asr_node
+Subscribes to `audio_stream`, buffers audio between start/end utterance events, transcribes using pywhispercpp, publishes to `text_stream` and `events`.
 
-### llm_support
+### asr_gemma_node
+Alternative ASR using Gemma multimodal model instead of whisper.
 
-`llm_node` subscribes to `text_stream` and responds on `llm_response` topic.
+### tts_node
+Subscribes to `text_stream`, synthesizes speech using pocket-tts, publishes audio chunks to `speech_stream`. Handles stop/interrupt events.
+
+### llm_node
+Subscribes to `text_stream`, streams responses from Ollama via pydantic_ai, publishes sentence-by-sentence to `llm_response`. Handles stop/interrupt events.
+
+## CLI Tools
+
+```bash
+# Listen on any room
+python src/tools/listener.py --room text_stream
+
+# Send text to any room
+python src/tools/sender.py --room text_stream --message "hello"
+```
+
+## Configuration
+
+All nodes accept `--hub-url` (env: `HUB_URL`, default: `http://localhost:5000`) plus node-specific options. Run with `--help` for details.
+
+## Audio Message Format
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `info.num_channels` | int | Channel count (default: 1) |
+| `info.sample_rate` | int | Sample rate (default: 16000) |
+| `info.chunk_size` | int | Samples per chunk (default: 512) |
+| `info.format` | str | Format identifier |
+| `data.int16_data` | list[int] | Audio samples as int16 |
+| `data.float32_data` | list[float] | Audio samples as float32 |
+| `event` | str | `start_utterance`, `end_utterance`, `break`, or empty |

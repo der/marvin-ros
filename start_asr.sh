@@ -1,3 +1,2 @@
 . ./setup.sh
-#ros2 run audio_base asr_node --ros-args -p model_name:=small.en
-ros2 run audio_base asr_node
+python src/audio_base/asr_node.py

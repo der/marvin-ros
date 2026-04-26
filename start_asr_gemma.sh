@@ -1,2 +1,2 @@
 . ./setup.sh
-ros2 run audio_base asr_gemma_node
+python src/audio_base/asr_gemma_node.py

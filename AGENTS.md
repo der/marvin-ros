@@ -1,7 +1,7 @@
 # AGENTS.md - Marvin Base Station (socket.io)
 
 ## Project Overview
-Base station nodes for Marvin the droid. Nodes communicate via python-socket.io through a central hub process, replacing the previous ROS2 architecture.
+Base station nodes for Marvin the droid. Nodes communicate via python-socket.io through a central hub process.
 
 ## Architecture
 - **Hub**: Standalone ASGI server (uvicorn + python-socketio) on port 5000. Manages room subscriptions and routes messages.
@@ -76,6 +76,9 @@ class MyNode(BaseNode):
 - **Audio payloads**: Binary attachments for int16 data (not JSON arrays)
 - **Events room**: Treated like any other room - nodes explicitly subscribe if needed
 - **PYTHONPATH**: setup.sh adds `src/` and venv packages to PYTHONPATH
+- **TTS synthesis**: Runs in a background thread to avoid blocking the asyncio event loop
+- **ASR transcription**: Also runs in a thread executor for the same reason
+- **LLM streaming**: Uses `asyncio.create_task()` to avoid blocking message handlers
 
 ## Testing
 No unit tests yet. Manual testing:

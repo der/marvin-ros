@@ -1,2 +1,2 @@
 . ./setup.sh
-ros2 run audio_base tts_node --ros-args -p input_topic:=llm_response
+python src/audio_base/tts_node.py --input-topic text_stream --output-topic speech_stream
