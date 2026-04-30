@@ -19,7 +19,7 @@ Base station nodes for Marvin the droid. Nodes communicate via python-socket.io 
 
 ## Setup
 ```bash
-python3 -m venv ./venv && touch ./venv/COLCON_IGNORE
+python3 -m venv ./venv
 . ./venv/bin/activate
 pip install -r requirements.txt
 . ./setup.sh
@@ -75,7 +75,6 @@ class MyNode(BaseNode):
 - **pywhispercpp GPU**: CUDA setup is unreliable; Strix Halo uses `GGML_VULKAN=1`
 - **Audio payloads**: Binary attachments for int16 data (not JSON arrays)
 - **Events room**: Treated like any other room - nodes explicitly subscribe if needed
-- **PYTHONPATH**: setup.sh adds `src/` and venv packages to PYTHONPATH
 - **TTS synthesis**: Runs in a background thread to avoid blocking the asyncio event loop
 - **ASR transcription**: Also runs in a thread executor for the same reason
 - **LLM streaming**: Uses `asyncio.create_task()` to avoid blocking message handlers

@@ -59,7 +59,7 @@ async def publish(sid, data):
     message = data.get("message")
     has_binary = data.get("has_binary", False)
 
-    logger.info(f"Client {sid} published to room: {room}")
+    # logger.info(f"Client {sid} published to room: {room}")
 
     if has_binary:
         binary_data = data.get("binary")

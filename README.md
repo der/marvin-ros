@@ -12,7 +12,7 @@ Socket.io-based base station nodes for Marvin the droid. All nodes communicate v
 ## Setup
 
 ```bash
-python3 -m venv ./venv && touch ./venv/COLCON_IGNORE
+python3 -m venv ./venv
 . ./venv/bin/activate
 pip install -r requirements.txt
 . ./setup.sh
@@ -33,7 +33,7 @@ GGML_VULKAN=1 pip install git+https://github.com/absadiki/pywhispercpp
 
 # Then individual nodes
 ./start_capture.sh     # Audio capture from mic
-./start_asr.sh         # ASR (whisper)
+./start_asr.sh         # ASR (whisper)sf
 ./start_asr_gemma.sh   # ASR (gemma multimodal)
 ./start_llm.sh         # LLM (gemma4:26b via ollama)
 ./start_tts.sh         # TTS (pocket-tts)

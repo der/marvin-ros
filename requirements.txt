@@ -12,7 +12,7 @@ pocket-tts
 lark
 torch
 torchvision
-accellerate
+accelerate
 librosa
 python-socketio[asyncio_client]
 uvicorn
