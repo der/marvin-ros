@@ -26,7 +26,7 @@ class BaseNode:
                 super().__init__(hub_url=..., node_name="my_node")
                 self.handler("some_room")(self.on_some_message)
 
-            async def on_some_message(self, data: dict, binary: bytes | None):
+            async def on_some_message(self, data: dict):
                 ...
 
         node = MyNode()
@@ -63,18 +63,16 @@ class BaseNode:
         async def on_message(data: dict, binary: Optional[bytes] = None):
             room = data.get("room", "unknown")
             message = data.get("message", {})
-            has_binary = data.get("has_binary", False)
-            payload = binary if has_binary else None
             handler = self._handlers.get(room)
             if handler:
-                await handler(message, payload)
+                await handler(message)
             else:
                 logger.debug(f"{self.node_name} received message on {room} (no handler)")
 
     def handler(self, room: str):
         """Decorator to register a handler for messages on a room.
 
-        Handler signature: async def handler(message: dict, binary: bytes | None)
+        Handler signature: async def handler(message: dict)
         """
 
         def decorator(fn: Callable):
@@ -92,13 +90,9 @@ class BaseNode:
         self,
         room: str,
         message: dict,
-        binary: Optional[bytes] = None,
     ) -> None:
         """Publish a message to a room."""
         data: dict[str, Any] = {"room": room, "message": message}
-        if binary is not None:
-            data["has_binary"] = True
-            data["binary"] = binary
         await self.sio.emit("publish", data)
 
     async def run(self) -> None:

@@ -60,7 +60,7 @@ class TTSNode(BaseNode):
         self.handler(self.input_topic)(self.text_callback)
         self.handler("events")(self.event_callback)
 
-    async def text_callback(self, message: dict, binary: bytes | None):
+    async def text_callback(self, message: dict):
         """Queue incoming text for synthesis."""
         text = message.get("data", "")
         text = text.strip()
@@ -69,7 +69,7 @@ class TTSNode(BaseNode):
             await self._text_queue.put(text)
             logger.info(f"Queued text: {text!r}")
 
-    async def event_callback(self, message: dict, binary: bytes | None):
+    async def event_callback(self, message: dict):
         event = message.get("data", "")
         event = event.strip()
         if event == "stop":

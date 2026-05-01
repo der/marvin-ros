@@ -69,14 +69,14 @@ class LLMNode(BaseNode):
             model_settings={"thinking": False},
         )
 
-    async def event_callback(self, message: dict, binary: bytes | None):
+    async def event_callback(self, message: dict):
         msg = message.get("data", "").strip()
         if msg in ("interrupt", "stop"):
             if self.is_running:
                 logger.info("Interrupt event received, stopping current LLM response")
                 self.stop = True
 
-    async def message_callback(self, message: dict, binary: bytes | None):
+    async def message_callback(self, message: dict):
         text = message.get("data", "").strip()
         logger.info(f"Processing message: {text}")
 

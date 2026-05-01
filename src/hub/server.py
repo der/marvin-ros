@@ -57,26 +57,15 @@ async def publish(sid, data):
         return
 
     message = data.get("message")
-    has_binary = data.get("has_binary", False)
 
     # logger.info(f"Client {sid} published to room: {room}")
 
-    if has_binary:
-        binary_data = data.get("binary")
-        await sio.emit(
-            "message",
-            {"room": room, "message": message, "has_binary": True},
-            binary=binary_data,
-            room=room,
-            skip_sid=sid,
-        )
-    else:
-        await sio.emit(
-            "message",
-            {"room": room, "message": message},
-            room=room,
-            skip_sid=sid,
-        )
+    await sio.emit(
+        "message",
+        {"room": room, "message": message},
+        room=room,
+        skip_sid=sid,
+    )
 
 
 app = Starlette(

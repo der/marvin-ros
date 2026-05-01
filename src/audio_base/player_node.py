@@ -56,7 +56,7 @@ class AudioPlayerNode(BaseNode):
 
         self.handler(self.topic)(self.audio_chunk_callback)
 
-    async def audio_chunk_callback(self, message: dict, binary: bytes | None):
+    async def audio_chunk_callback(self, message: dict):
         """Handle incoming audio chunk messages."""
         self.chunks_received += 1
 
@@ -84,12 +84,9 @@ class AudioPlayerNode(BaseNode):
 
         # Convert to numpy
         int16_list = data.get("int16_data", [])
-        if int16_list:
-            audio_data = np.array(int16_list, dtype=np.int16)
-        elif binary:
-            audio_data = np.frombuffer(binary, dtype=np.int16)
-        else:
+        if not int16_list:
             return
+        audio_data = np.array(int16_list, dtype=np.int16)
 
         # Test for events
         if event:

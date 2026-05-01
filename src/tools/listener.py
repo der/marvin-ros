@@ -19,12 +19,9 @@ class Listener(BaseNode):
         self.room = room
         self.handler(room)(self.on_message)
 
-    async def on_message(self, message: dict, binary: bytes | None):
+    async def on_message(self, message: dict):
         text = message.get("data", message)
-        if binary:
-            print(f"[{self.room}] {text} (binary: {len(binary)} bytes)")
-        else:
-            print(f"[{self.room}] {text}")
+        print(f"[{self.room}] {text}")
 
     async def run(self):
         await self.sio.connect(self.hub_url)

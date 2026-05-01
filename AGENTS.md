@@ -14,7 +14,7 @@ Base station nodes for Marvin the droid. Nodes communicate via python-socket.io 
 |-------|-----------|---------|
 | `join` | client→hub | `{"room": "text_stream"}` |
 | `leave` | client→hub | `{"room": "text_stream"}` |
-| `publish` | client→hub | `{"room": "...", "message": {...}, "has_binary": true?}` + optional binary |
+| `publish` | client→hub | `{"room": "...", "message": {...}}` |
 | `message` | hub→clients | `{"room": "...", "message": {...}}` (+ binary if present), sender excluded |
 
 ## Setup

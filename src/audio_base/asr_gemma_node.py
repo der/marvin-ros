@@ -124,7 +124,7 @@ class ASRGemmaNode(BaseNode):
         logger.info(f"Transcribed segment: {transcription}")
         self._results_queue.put({"data": transcription})
 
-    async def audio_chunk_callback(self, message: dict, binary: bytes | None):
+    async def audio_chunk_callback(self, message: dict):
         """Handle incoming audio chunk messages."""
         info = message.get("info", {})
         data = message.get("data", {})

@@ -94,7 +94,7 @@ class ASRNode(BaseNode):
             if stripped == "stop":
                 self._results_queue.put({"data": "stop"})
 
-    async def audio_chunk_callback(self, message: dict, binary: bytes | None):
+    async def audio_chunk_callback(self, message: dict):
         """Handle incoming audio chunk messages."""
         info = message.get("info", {})
         data = message.get("data", {})
