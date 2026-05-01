@@ -19,24 +19,50 @@ Base station nodes for Marvin the droid. Nodes communicate via python-socket.io 
 
 ## Setup
 ```bash
-python3 -m venv ./venv
-. ./venv/bin/activate
-pip install -r requirements.txt
-. ./setup.sh
+uv sync
+uv sync --extra dev  # include ruff, pyright, pytest
 ```
 
 ## Running
 ```bash
 # Start hub first
-./start_hub.sh
+uv run ./start_hub.sh
 
-# Then individual nodes (all source setup.sh)
-./start_asr.sh         # ASR node (whisper)
-./start_asr_gemma.sh   # Alternative ASR using gemma
-./start_llm.sh         # LLM node (gemma4:26b via ollama)
-./start_tts.sh         # TTS node (pocket-tts)
-./start_player.sh      # Audio player node
-./start_capture.sh     # Audio capture node
+# Then individual nodes
+uv run ./start_asr.sh         # ASR node (whisper)
+uv run ./start_asr_gemma.sh   # Alternative ASR using gemma
+uv run ./start_llm.sh         # LLM node (gemma4:26b via ollama)
+uv run ./start_tts.sh         # TTS node (pocket-tts)
+uv run ./start_player.sh      # Audio player node
+uv run ./start_capture.sh     # Audio capture node
+```
+
+## Linting & Type Checking
+```bash
+uv run ruff check .           # lint
+uv run ruff check . --fix     # lint + auto-fix
+uv run pyright                # type check
+```
+
+## Running
+```bash
+# Start hub first
+uv run ./start_hub.sh
+
+# Then individual nodes
+uv run ./start_asr.sh         # ASR node (whisper)
+uv run ./start_asr_gemma.sh   # Alternative ASR using gemma
+uv run ./start_llm.sh         # LLM node (gemma4:26b via ollama)
+uv run ./start_tts.sh         # TTS node (pocket-tts)
+uv run ./start_player.sh      # Audio player node
+uv run ./start_capture.sh     # Audio capture node
+```
+
+## Linting & Type Checking
+```bash
+uv run ruff check .           # lint
+uv run ruff check . --fix     # lint + auto-fix
+uv run pyright                # type check
 ```
 
 ## Package Structure (`src/`)

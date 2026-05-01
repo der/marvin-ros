@@ -12,32 +12,52 @@ Socket.io-based base station nodes for Marvin the droid. All nodes communicate v
 ## Setup
 
 ```bash
-python3 -m venv ./venv
-. ./venv/bin/activate
-pip install -r requirements.txt
-. ./setup.sh
+uv sync
+uv sync --extra dev  # include ruff, pyright, pytest
 ```
 
 For ASR node, install `pywhispercpp` with GPU support:
 
 ```bash
 # Strix Halo (Vulkan)
-GGML_VULKAN=1 pip install git+https://github.com/absadiki/pywhispercpp
+GGML_VULKAN=1 uv pip install git+https://github.com/absadiki/pywhispercpp
 ```
 
 ## Running
 
 ```bash
 # Start hub first
-./start_hub.sh
+uv run ./start_hub.sh
 
 # Then individual nodes
-./start_capture.sh     # Audio capture from mic
-./start_asr.sh         # ASR (whisper)sf
-./start_asr_gemma.sh   # ASR (gemma multimodal)
-./start_llm.sh         # LLM (gemma4:26b via ollama)
-./start_tts.sh         # TTS (pocket-tts)
-./start_player.sh      # Audio playback
+uv run ./start_capture.sh     # Audio capture from mic
+uv run ./start_asr.sh         # ASR (whisper)
+uv run ./start_asr_gemma.sh   # ASR (gemma multimodal)
+uv run ./start_llm.sh         # LLM (gemma4:26b via ollama)
+uv run ./start_tts.sh         # TTS (pocket-tts)
+uv run ./start_player.sh      # Audio playback
+```
+
+For ASR node, install `pywhispercpp` with GPU support:
+
+```bash
+# Strix Halo (Vulkan)
+GGML_VULKAN=1 uv pip install git+https://github.com/absadiki/pywhispercpp
+```
+
+## Running
+
+```bash
+# Start hub first
+uv run ./start_hub.sh
+
+# Then individual nodes
+uv run ./start_capture.sh     # Audio capture from mic
+uv run ./start_asr.sh         # ASR (whisper)
+uv run ./start_asr_gemma.sh   # ASR (gemma multimodal)
+uv run ./start_llm.sh         # LLM (gemma4:26b via ollama)
+uv run ./start_tts.sh         # TTS (pocket-tts)
+uv run ./start_player.sh      # Audio playback
 ```
 
 ## Rooms & Data Flow
@@ -78,10 +98,10 @@ Subscribes to `text_stream`, streams responses from Ollama via pydantic_ai, publ
 
 ```bash
 # Listen on any room
-python src/tools/listener.py --room text_stream
+uv run python src/tools/listener.py --room text_stream
 
 # Send text to any room
-python src/tools/sender.py --room text_stream --message "hello"
+uv run python src/tools/sender.py --room text_stream --message "hello"
 ```
 
 ## Configuration

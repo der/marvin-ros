@@ -1,2 +1,1 @@
-. ./setup.sh
-python src/audio_base/capture_node.py
+uv run python src/audio_base/capture_node.py
