@@ -66,7 +66,7 @@ async def publish(sid, data):
         "message",
         {"room": room, "message": message},
         room=room,
-        skip_sid=sid,
+        # skip_sid=sid,
     )
 
 
