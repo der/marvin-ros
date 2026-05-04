@@ -61,7 +61,7 @@ class BaseNode:
             self._connected.clear()
 
         @self.sio.on("message")
-        async def on_message(data: dict, binary: Optional[bytes] = None):
+        async def on_message(data: dict):
             room = data.get("room", "unknown")
             message = data.get("message", {})
             handler = self._handlers.get(room)
@@ -90,11 +90,16 @@ class BaseNode:
     async def publish(
         self,
         room: str,
-        message: dict,
+        message: dict|str,
     ) -> None:
         """Publish a message to a room."""
         data: dict[str, Any] = {"room": room, "message": message}
         await self.sio.emit("publish", data)
+
+    async def publish_event(self, type: str, message: str) -> None:
+        """Publish a message to a room."""
+        data: dict[str, Any] = {"type": type, "message": message}
+        await self.sio.emit("publish", {"room": "/events", "message": data})
 
     async def run(self) -> None:
         """Connect to hub and wait until interrupted."""

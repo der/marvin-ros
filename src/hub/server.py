@@ -1,7 +1,9 @@
 """Hub ASGI server - central message broker using python-socketio."""
 
 import logging
+
 import socketio
+import uvicorn
 from starlette.applications import Starlette
 from starlette.routing import Mount
 
@@ -73,3 +75,7 @@ app = Starlette(
         Mount("/", app=sio_app),
     ]
 )
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=5000)
+

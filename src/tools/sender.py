@@ -13,24 +13,24 @@ logger = logging.getLogger("node")
 
 
 class Sender(BaseNode):
-    def __init__(self, hub_url: str, room: str):
-        super().__init__(hub_url=hub_url, node_name=f"sender:{room}")
-        self.room = room
+    def __init__(self, hub_url: str, topic: str):
+        super().__init__(hub_url=hub_url, node_name=f"sender:{topic}")
+        self.topic = topic
 
     async def send(self, text: str):
-        await self.publish(self.room, {"data": text})
+        await self.publish(self.topic, text)
         logger.info(f"Sent: {text}")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Send text to a room")
-    parser.add_argument("--room", required=True, help="Room to send to")
+    parser.add_argument("--topic", required=True, help="Room topic to send to")
     parser.add_argument("--hub-url", default=None, help="Hub URL (default: http://localhost:5000)")
     parser.add_argument("--message", default=None, help="Message to send (or use stdin)")
     args = parser.parse_args()
 
     hub_url = args.hub_url or "http://localhost:5000"
-    sender = Sender(hub_url=hub_url, room=args.room)
+    sender = Sender(hub_url=hub_url, topic=args.topic)
 
     async def run():
         await sender.sio.connect(hub_url)

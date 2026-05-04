@@ -1,1 +1,2 @@
-uv run python src/llm_support/llm_node.py --model-name gemma4:26b
+. venv/bin/activate
+python src/llm_support/llm_node.py --model-name gemma4:26b

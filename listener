@@ -1,1 +1,2 @@
-uv run python src/tools/listener.py "$@"
+. venv/bin/activate
+python src/tools/listener.py "$@"

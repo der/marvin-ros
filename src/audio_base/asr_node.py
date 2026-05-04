@@ -9,7 +9,6 @@ import asyncio
 import contextlib
 import logging
 import os
-import sys
 import threading
 from queue import Empty, Queue
 
@@ -27,8 +26,8 @@ class ASRNode(BaseNode):
     def __init__(
         self,
         hub_url: str,
-        topic: str = "audio_stream",
-        output_topic: str = "text_stream",
+        topic: str = "/audio_stream",
+        output_topic: str = "/text_stream",
         model_name: str = "large-v3-turbo-q5_0",
     ):
         super().__init__(hub_url=hub_url, node_name="asr_node")
@@ -43,10 +42,12 @@ class ASRNode(BaseNode):
         self.format: str = ""
 
         # Model
-        self.model: Model | None = None
+        logger.info(f'Loading Whisper model "{self.model_name}"...')
+        self.model: Model = Model(self.model_name)
+        logger.info(f'Whisper model "{self.model_name}" loaded successfully')
 
         # Buffer for accumulating audio
-        self.buffer: None | np.ndarray = None
+        self.buffer: np.ndarray= np.zeros(30 * self.sample_rate, dtype=np.float32)
         self.buffer_index = 0
         self.buffer_lock = threading.Lock()
 
@@ -75,23 +76,14 @@ class ASRNode(BaseNode):
             if self.buffer_index == 0:
                 return
             buffer = self.buffer[: self.buffer_index].copy()
-            self.reset_buffer()
-
-        segments = []
+        self.reset_buffer()
 
         def segment_callback(segment):
             text = segment.text
             logger.info(f"Transcribed segment: {text}")
-            segments.append(text)
+            self._results_queue.put_nowait(text)
 
         self.model.transcribe(buffer, new_segment_callback=segment_callback)
-
-        for text in segments:
-            stripped = text.strip()
-            self._results_queue.put({"data": text})
-            self._results_queue.put({"data": f"asr/{stripped}"})
-            if stripped == "stop":
-                self._results_queue.put({"data": "stop"})
 
     async def audio_chunk_callback(self, message: dict):
         """Handle incoming audio chunk messages."""
@@ -124,37 +116,26 @@ class ASRNode(BaseNode):
         elif event == "end_utterance":
             logger.info("End of utterance detected")
             self.append_to_buffer(audio_data)
-            # Run transcription in a thread
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self._transcribe_sync)
+            await asyncio.to_thread(self._transcribe_sync)
         else:
             if not self.append_to_buffer(audio_data):
                 logger.warning("Audio buffer overflow, processing current buffer")
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, self._transcribe_sync)
+                await asyncio.to_thread(self._transcribe_sync)
 
     async def _publisher_loop(self):
         """Publish transcription results from the thread-safe queue."""
         while True:
             try:
-                item = await asyncio.get_event_loop().run_in_executor(
-                    None, self._results_queue.get, True, 0.5
-                )
+                text = self._results_queue.get_nowait()
+                await self.publish(self.output_topic, text)
+                await self.publish_event("asr", text)
+                if text.strip().lower().replace(".", "") == 'stop':
+                    await self.publish_event("sys", "stop")
+                self._results_queue.task_done()
             except Empty:
-                continue
-
-            await self.publish(self.output_topic, item)
-            await self.publish("events", item)
+                await asyncio.sleep(0.1)
 
     async def run(self):
-        # Load model
-        logger.info(f'Loading Whisper model "{self.model_name}"...')
-        self.model = Model(self.model_name)
-        logger.info(f'Whisper model "{self.model_name}" loaded successfully')
-
-        # Initialize buffer
-        self.reset_buffer()
-
         # Connect to hub
         await self.sio.connect(self.hub_url)
         await self._connected.wait()
