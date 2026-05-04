@@ -4,18 +4,17 @@ import asyncio
 import logging
 import os
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 import socketio
 from pydantic import BaseModel
 
 logger = logging.getLogger("node")
 
-
-class TextMessage(BaseModel):
-    """Plain text message, equivalent to std_msgs/msg/String."""
-
-    data: str
+class EventMessage(BaseModel):
+    """Message format used on event channel."""
+    type: str
+    message: str
 
 
 class BaseNode:
@@ -37,7 +36,7 @@ class BaseNode:
 
     def __init__(
         self,
-        hub_url: Optional[str] = None,
+        hub_url: str | None = None,
         node_name: str = "node",
     ):
         self.hub_url = hub_url or os.environ.get("HUB_URL", "http://localhost:5000")

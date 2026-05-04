@@ -17,7 +17,7 @@ from pocket_tts import TTSModel
 from scipy.signal import resample_poly
 
 from messages.audio import AudioData, AudioInfo, AudioMessage
-from messages.base import BaseNode
+from messages.base import BaseNode, EventMessage
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
 logger = logging.getLogger("tts_node")
@@ -56,7 +56,7 @@ class TTSNode(BaseNode):
 
         # Register handlers
         self.handler(self.input_topic)(self.text_callback)
-        self.handler("events")(self.event_callback)
+        self.handler("/events")(self.event_callback)
 
     async def text_callback(self, message: dict):
         """Queue incoming text for synthesis."""
@@ -68,12 +68,10 @@ class TTSNode(BaseNode):
             logger.info(f"Queued text: {text!r}")
 
     async def event_callback(self, message: dict):
-        event = message.get("data", "")
-        event = event.strip()
-        if event == "stop":
-            logger.info("Stop event received")
+        msg = EventMessage(**message)
+        if msg.message in ("interrupt", "stop"):
+            logger.info("Interrupt event received, stopping synthesis")
             if self.is_running:
-                logger.info("Stopping current TTS synthesis")
                 self.stop = True
             # Clear text queue
             while not self._text_queue.empty():
@@ -181,7 +179,7 @@ class TTSNode(BaseNode):
 
         # Subscribe to rooms
         await self.subscribe(self.input_topic)
-        await self.subscribe("events")
+        await self.subscribe("/events")
         logger.info(f"TTS node ready: {self.input_topic} -> {self.output_topic}")
 
         # Start synthesis worker
@@ -202,7 +200,7 @@ class TTSNode(BaseNode):
 def main():
     parser = argparse.ArgumentParser(description="TTS node")
     parser.add_argument("--hub-url", default=None, help="Hub URL")
-    parser.add_argument("--input-topic", default="/text_stream", help="Input text room")
+    parser.add_argument("--input-topic", default="/llm_response", help="Input text room")
     parser.add_argument("--output-topic", default="/speech_stream", help="Output audio room")
     parser.add_argument("--voice", default="alba", help="Voice to use")
     args = parser.parse_args()

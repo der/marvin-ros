@@ -9,14 +9,13 @@ import asyncio
 import logging
 import os
 import re
-import sys
 
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.providers.ollama import OllamaProvider
 
-from messages.base import BaseNode
+from messages.base import BaseNode, EventMessage
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
 logger = logging.getLogger("llm_node")
@@ -31,7 +30,7 @@ class LLMNode(BaseNode):
         hub_url: str,
         text_topic: str = "text_stream",
         response_topic: str = "llm_response",
-        model_name: str = "granite4:tiny-h",
+        model_name: str = "gemma4:26b",
     ):
         super().__init__(hub_url=hub_url, node_name="llm_node")
         self.text_topic = text_topic
@@ -43,19 +42,24 @@ class LLMNode(BaseNode):
 
         # Register handlers
         self.handler(self.text_topic)(self.message_callback)
-        self.handler("events")(self.event_callback)
+        self.handler("/events")(self.event_callback)
 
     async def _setup(self):
         """Initialize the LLM agent."""
-        ollama_model = OpenAIChatModel(
-            model_name=self.model_name,
-            provider=OllamaProvider(base_url="http://localhost:11434/v1"),
-            profile=ModelProfile(
-                supports_thinking=True,
-                thinking_tags=("<|channel>thought", "<channel|>"),
-            ),
-        )
-
+        if self.model_name.startswith("gemma4"):
+            ollama_model = OpenAIChatModel(
+                model_name=self.model_name,
+                provider=OllamaProvider(base_url="http://localhost:11434/v1"),
+                profile=ModelProfile(
+                    supports_thinking=True,
+                    thinking_tags=("<|channel>thought", "<channel|>"),
+                ),
+            )
+        else:
+            ollama_model = OpenAIChatModel(
+                model_name=self.model_name,
+                provider=OllamaProvider(base_url="http://localhost:11434/v1"),
+            )
         self.agent = Agent(
             ollama_model,
             output_type=str,
@@ -68,14 +72,13 @@ class LLMNode(BaseNode):
         )
 
     async def event_callback(self, message: dict):
-        msg = message.get("data", "").strip()
-        if msg in ("interrupt", "stop"):
-            if self.is_running:
-                logger.info("Interrupt event received, stopping current LLM response")
-                self.stop = True
+        msg = EventMessage(**message)
+        if msg.message in ("interrupt", "stop"):
+            logger.info("Interrupt event received, stopping current LLM response")
+            self.stop = True
 
-    async def message_callback(self, message: dict):
-        text = message.get("data", "").strip()
+    async def message_callback(self, message: str):
+        text = message.strip()
         logger.info(f"Processing message: {text}")
 
         if re.match(r"^stop[.!?]*$", text, re.IGNORECASE):
@@ -93,7 +96,7 @@ class LLMNode(BaseNode):
         if text:
             logger.info(f"LLM response: {text}")
             await self.publish(self.response_topic, {"data": text})
-            await self.publish("events", {"data": f"llm/{text}"})
+            await self.publish_event("llm", text)
 
     async def _stream_agent(self, text: str):
         self.is_running = True
@@ -127,7 +130,7 @@ class LLMNode(BaseNode):
 
         # Subscribe to rooms
         await self.subscribe(self.text_topic)
-        await self.subscribe("events")
+        await self.subscribe("/events")
 
         logger.info(
             f"LLM Node started, listening on: {self.text_topic}, "
@@ -148,7 +151,7 @@ def main():
     parser.add_argument("--hub-url", default=None, help="Hub URL")
     parser.add_argument("--text-topic", default="/text_stream", help="Input text room")
     parser.add_argument("--response-topic", default="/llm_response", help="Output response room")
-    parser.add_argument("--model-name", default="granite4:tiny-h", help="Ollama model name")
+    parser.add_argument("--model-name", default="gemma4:26b", help="Ollama model name")
     args = parser.parse_args()
 
     hub_url = args.hub_url or os.environ.get("HUB_URL", "http://localhost:5000")

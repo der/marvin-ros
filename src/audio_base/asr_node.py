@@ -15,7 +15,7 @@ from queue import Empty, Queue
 import numpy as np
 from pywhispercpp.model import Model
 
-from messages.audio import AudioInfo, AudioMessage
+from messages.audio import AudioMessage
 from messages.base import BaseNode
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
@@ -85,35 +85,33 @@ class ASRNode(BaseNode):
 
         self.model.transcribe(buffer, new_segment_callback=segment_callback)
 
+
     async def audio_chunk_callback(self, message: dict):
         """Handle incoming audio chunk messages."""
-        info = message.get("info", {})
-        data = message.get("data", {})
-        event = message.get("event", "")
-
-        fmt = info.get("format", "")
+        msg = AudioMessage(**message)
+        
+        fmt = msg.info.format
         if fmt != self.format:
             logger.info(
                 f"Audio format set to: {fmt}, "
-                f"{info.get('sample_rate')}Hz, {info.get('num_channels')}ch, "
-                f"{info.get('chunk_size')} samples/chunk"
+                f"{msg.info.sample_rate}Hz, {msg.info.num_channels}ch, "
+                f"{msg.info.chunk_size} samples/chunk"
             )
             self.format = fmt
-            self.sample_rate = info.get("sample_rate", self.sample_rate)
-            self.channels = info.get("num_channels", self.channels)
-            self.chunk_size = info.get("chunk_size", self.chunk_size)
+            self.sample_rate = msg.info.sample_rate
+            self.channels = msg.info.num_channels
+            self.chunk_size = msg.info.chunk_size
 
         # Convert to numpy array
-        int16_list = data.get("int16_data", [])
-        if not int16_list:
+        if not msg.data.int16_data:
             return
-        audio_data = np.array(int16_list, dtype=np.int16).astype(np.float32) / 32768.0
+        audio_data = np.array(msg.data.int16_data, dtype=np.int16).astype(np.float32) / 32768.0
 
-        if event == "start_utterance":
+        if msg.event == "start_utterance":
             logger.info("Start of utterance detected")
             self.reset_buffer()
             self.append_to_buffer(audio_data)
-        elif event == "end_utterance":
+        elif msg.event == "end_utterance":
             logger.info("End of utterance detected")
             self.append_to_buffer(audio_data)
             await asyncio.to_thread(self._transcribe_sync)
