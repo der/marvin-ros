@@ -1,11 +1,13 @@
 """CLI tool to send text messages to a room."""
 
 import argparse
+import ast
 import asyncio
 import logging
 import sys
 
 from messages.base import BaseNode
+import contextlib
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
 logger = logging.getLogger("node")
@@ -17,9 +19,15 @@ class Sender(BaseNode):
         super().__init__(hub_url=hub_url, node_name=f"sender:{topic}")
         self.topic = topic
 
+
     async def send(self, text: str):
-        await self.publish(self.topic, text)
-        logger.info(f"Sent: {text}")
+        message: str | dict = text
+        if "{" in text:
+            with contextlib.suppress(ValueError, SyntaxError):
+                message = ast.literal_eval(text)
+                print(f"Parsed message as dict: {message}")
+        await self.publish(self.topic, message)
+        logger.info(f"Sent: {message}")
 
 
 def main():
