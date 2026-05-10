@@ -10,7 +10,8 @@ import logging
 import os
 import re
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, SystemPromptPart
+from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.providers.ollama import OllamaProvider
@@ -36,6 +37,7 @@ class LLMNode(BaseNode):
         self.text_topic = text_topic
         self.response_topic = response_topic
         self.model_name = model_name
+        self.messages: list[ModelMessage] | None = None
 
         self.is_running = False
         self.stop = False
@@ -69,6 +71,7 @@ class LLMNode(BaseNode):
                 'If the user just says "Marvin" then respond with "Hi"'
             ),
             model_settings={"thinking": False},
+            history_processors=[self.keep_recent_messages]
         )
 
     async def event_callback(self, message: dict):
@@ -103,7 +106,7 @@ class LLMNode(BaseNode):
         self.stop = False
         buffer = ""
         try:
-            async with self.agent.run_stream(text) as response:
+            async with self.agent.run_stream(text, message_history = self.messages) as response:
                 async for chunk in response.stream_text(delta=True):
                     if self.stop:
                         logger.info("LLM response streaming stopped")
@@ -116,10 +119,72 @@ class LLMNode(BaseNode):
                     for sentence in parts[:-1]:
                         await self._publish(sentence)
                     buffer = parts[-1]
+                if self.messages is None:
+                    self.messages = response.all_messages()
+                else:
+                    self.messages += response.new_messages()
             # Publish any remaining text after streaming completes
             await self._publish(buffer)
         finally:
             self.is_running = False
+
+    async def keep_recent_messages(self, messages: list[ModelMessage]) -> list[ModelMessage]:
+        """
+        Keep only recent messages while preserving AI model message ordering rules.
+
+        Most AI models require proper sequencing of:
+        - Tool/function calls and their corresponding returns
+        - User messages and model responses
+        - Multi-turn conversations with proper context
+
+        This means we cannot cut conversation history in a way that:
+        - Leaves tool calls without their corresponding returns
+        - Separates paired messages inappropriately
+        - Breaks the logical flow of multi-turn interactions
+
+        Reference: https://github.com/pydantic/pydantic-ai/issues/2050
+        """
+        message_window = 15
+
+        if len(messages) <= message_window:
+            return messages
+
+        # Find system prompt if it exists
+        system_prompt = None
+        system_prompt_index = None
+        for i, msg in enumerate(messages):
+            if isinstance(msg, ModelRequest) and any(isinstance(part, SystemPromptPart) for part in msg.parts):
+                system_prompt = msg
+                system_prompt_index = i
+                break
+
+        # Start at target cut point and search backward (upstream) for a safe cut
+        target_cut = len(messages) - message_window
+
+        for cut_index in range(target_cut, -1, -1):
+            first_message = messages[cut_index]
+
+            # Skip if first message has tool returns (orphaned without calls)
+            if any(isinstance(part, ToolReturnPart) for part in first_message.parts):
+                continue
+
+            # Skip if first message has tool calls (violates AI model ordering rules)
+            if isinstance(first_message, ModelResponse) and any(
+                isinstance(part, ToolCallPart) for part in first_message.parts
+            ):
+                continue
+
+            # Found a safe cut point
+            result = messages[cut_index:]
+
+            # If we cut off the system prompt, prepend it back
+            if system_prompt is not None and system_prompt_index is not None and cut_index > system_prompt_index:
+                result = [system_prompt] + result
+
+            return result
+
+        # No safe cut point found, keep all messages
+        return messages
 
     async def run(self):
         await self._setup()

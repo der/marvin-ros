@@ -1,0 +1,9 @@
+#/bin/bash
+trap "kill $(jobs -p) 2>/dev/null" EXIT INT TERM
+
+mkdir -p logs
+. start_hub.sh > logs/hub.log 2>&1 &
+. start_asr.sh > logs/asr.log 2>&1 &
+. start_tts.sh > logs/tts.log 2>&1 &
+. start_llm.sh > logs/llm.log 2>&1 &
+./listener --topic /events
