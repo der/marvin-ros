@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 import re
+from datetime import datetime
 
 from pydantic_ai import Agent, SystemPromptPart
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, ToolCallPart, ToolReturnPart
@@ -24,6 +25,10 @@ logger = logging.getLogger("llm_node")
 # Matches the position just after sentence-ending punctuation followed by whitespace
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 
+# Tools for use by the agent, extract to separate file if this grows
+def get_time() -> str:
+    """Get the current date and time."""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 class LLMNode(BaseNode):
     def __init__(
@@ -45,6 +50,7 @@ class LLMNode(BaseNode):
         # Register handlers
         self.handler(self.text_topic)(self.message_callback)
         self.handler("/events")(self.event_callback)
+
 
     async def _setup(self):
         """Initialize the LLM agent."""
@@ -70,6 +76,7 @@ class LLMNode(BaseNode):
                 "Respond to questions VERY BRIEFLY in plain text that the droid can speak aloud."
                 'If the user just says "Marvin" then respond with "Hi"'
             ),
+            tools=[get_time],
             model_settings={"thinking": False},
             history_processors=[self.keep_recent_messages]
         )
