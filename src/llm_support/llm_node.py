@@ -30,6 +30,7 @@ def get_time() -> str:
     """Get the current date and time."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+
 class LLMNode(BaseNode):
     def __init__(
         self,
@@ -51,7 +52,6 @@ class LLMNode(BaseNode):
         self.handler(self.text_topic)(self.message_callback)
         self.handler("/events")(self.event_callback)
 
-
     async def _setup(self):
         """Initialize the LLM agent."""
         if self.model_name.startswith("gemma4"):
@@ -68,6 +68,16 @@ class LLMNode(BaseNode):
                 model_name=self.model_name,
                 provider=OllamaProvider(base_url="http://localhost:11434/v1"),
             )
+
+        async def move_neck(pan: int, tilt: int) -> None:
+            """Move your robot neck to the specified pan and tilt positions.
+            These are values between -100 and 100 representing the percentage 
+            of the full range of motion in each direction."""
+            # Placeholder implementation - replace with actual control code
+            logger.info(f"Moving neck to pan: {pan}, tilt: {tilt}")
+            await self.publish("/marvin/neck", {"pan": pan, "tilt": tilt, "speed": 1000})
+            return None
+        
         self.agent = Agent(
             ollama_model,
             output_type=str,
@@ -76,7 +86,7 @@ class LLMNode(BaseNode):
                 "Respond to questions VERY BRIEFLY in plain text that the droid can speak aloud."
                 'If the user just says "Marvin" then respond with "Hi"'
             ),
-            tools=[get_time],
+            tools=[get_time, move_neck],
             model_settings={"thinking": False},
             history_processors=[self.keep_recent_messages]
         )
